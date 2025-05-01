@@ -20,8 +20,15 @@ const userSchema = mongoose.Schema({
         type: String,
         enum: ['member', 'admin'],
         default: 'member'
+    },
+    resetPasswordToken: {
+        type: String
+    },
+    resetPasswordExpires: {
+        type: Date
     }
 });
+
 
 userSchema.plugin(uniqueValidator);
 

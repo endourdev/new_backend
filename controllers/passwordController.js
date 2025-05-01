@@ -3,40 +3,92 @@ const bcrypt = require('bcrypt');
 const User = require('../models/user');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const jwt = require('jsonwebtoken');
 const errorMessage = require('../utils/messages.json');
 
 // Fonction pour envoyer un email avec un token de réinitialisation
 exports.forgotPassword = (req, res, next) => {
   const { email } = req.body;
 
-  // Vérifier si l'utilisateur existe
   User.findOne({ email })
     .then(user => {
       if (!user) {
         return res.status(404).json({ message: errorMessage[404] });
       }
 
-      // Créer un token de réinitialisation de mot de passe
       const resetToken = crypto.randomBytes(32).toString('hex');
       user.resetPasswordToken = resetToken;
-      user.resetPasswordExpires = Date.now() + 3600000; // Token valide pendant 1 heure
+      user.resetPasswordExpires = Date.now() + 3600000; // 1h
       user.save()
         .then(() => {
-          // Envoyer l'email de réinitialisation avec le token
           const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: process.env.SMTP_SECURE === 'true',
             auth: {
-              user: process.env.EMAIL_USER,
-              pass: process.env.EMAIL_PASS
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS
             }
           });
 
+          const resetLink = `http://${req.headers.host}/api/password/reset-password/${resetToken}`;
+          const htmlContent = `
+            <!DOCTYPE html>
+            <html lang="fr">
+            <head>
+              <meta charset="UTF-8">
+              <title>Réinitialisation de votre mot de passe</title>
+              <style>
+                body {
+                  font-family: Arial, sans-serif;
+                  background-color: #f4f4f4;
+                  margin: 0;
+                  padding: 0;
+                }
+                .container {
+                  background-color: #ffffff;
+                  margin: 50px auto;
+                  padding: 20px;
+                  max-width: 600px;
+                  border-radius: 5px;
+                  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                }
+                .button {
+                  display: inline-block;
+                  padding: 10px 20px;
+                  margin-top: 20px;
+                  background-color: #007BFF;
+                  color: #ffffff;
+                  text-decoration: none;
+                  border-radius: 5px;
+                }
+                .footer {
+                  margin-top: 30px;
+                  font-size: 12px;
+                  color: #777777;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <h2>Réinitialisation de votre mot de passe</h2>
+                <p>Bonjour,</p>
+                <p>Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour procéder :</p>
+                <a href="${resetLink}" class="button">Réinitialiser le mot de passe</a>
+                <p>Si vous n'avez pas fait cette demande, vous pouvez ignorer cet email.</p>
+                <div class="footer">
+                  <p>Vous recevez cet email car vous êtes inscrit sur <a href="https://erisium-pvp.fr">erisium-pvp.fr</a>.</p>
+                  <p><a href="https://erisium-pvp.fr/unsubscribe">Se désabonner</a></p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+
           const mailOptions = {
-            from: process.env.EMAIL_USER,
+            from: `"Erisium Support" <${process.env.SMTP_USER}>`,
             to: user.email,
-            subject: 'Réinitialisation de mot de passe',
-            text: `Cliquez sur ce lien pour réinitialiser votre mot de passe : \nhttp://${req.headers.host}/reset-password/${resetToken}`
+            subject: 'Réinitialisation de votre mot de passe',
+            html: htmlContent
           };
 
           transporter.sendMail(mailOptions)
@@ -58,16 +110,15 @@ exports.forgotPassword = (req, res, next) => {
 
 // Fonction pour réinitialiser le mot de passe avec le token
 exports.resetPassword = (req, res, next) => {
-  const { resetToken, password } = req.body;
+  const resetToken = req.params.token || req.body.resetToken;
+  const { password } = req.body;
 
-  // Vérifier si le token est valide
   User.findOne({ resetPasswordToken: resetToken, resetPasswordExpires: { $gt: Date.now() } })
     .then(user => {
       if (!user) {
         return res.status(400).json({ message: 'Le token est invalide ou a expiré.' });
       }
 
-      // Hacher le nouveau mot de passe
       bcrypt.hash(password, 10)
         .then(hashedPassword => {
           user.password = hashedPassword;

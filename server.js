@@ -9,6 +9,7 @@ const errorMessage = require('./utils/messages.json');
 const requestLogger = require('./middleware/requestLogger');
 const errorLogger = require('./middleware/errorLogger');
 const userRoutes = require('./routes/user');
+const passwordRoutes = require('./routes/passwordRoutes');
 
 const app = express();
 const port = process.env.PORT;
@@ -45,6 +46,7 @@ mongoose.connect(`mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGOD
 app.use(requestLogger);
 
 app.use('/api/auth', userRoutes);
+app.use('/api/password', passwordRoutes);
 
 app.use(errorLogger);
 
