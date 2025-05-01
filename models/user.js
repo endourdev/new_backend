@@ -26,7 +26,11 @@ const userSchema = mongoose.Schema({
     },
     resetPasswordExpires: {
         type: Date
-    }
+    },
+    banned: {
+        type: Boolean,
+        default: false
+    },
 });
 
 

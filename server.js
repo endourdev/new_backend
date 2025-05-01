@@ -36,14 +36,13 @@ app.use(limiter);
 
 app.use(express.json());
 
-mongoose.connect(`mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PASSWORD}@cluster0.y6uux.mongodb.net/backend?retryWrites=true&w=majority&appName=Cluster0`, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
+mongoose.connect(`mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PASSWORD}@cluster0.y6uux.mongodb.net/backend?retryWrites=true&w=majority&appName=Cluster0`, {})
   .then(() => console.log('Connexion à MongoDB réussie !'))
   .catch((err) => console.error('Connexion à MongoDB échouée :', err.message));
 
 app.use(requestLogger);
+
+app.use('/', express.static(path.join(__dirname, 'public')))
 
 app.use('/api/auth', userRoutes);
 app.use('/api/password', passwordRoutes);
