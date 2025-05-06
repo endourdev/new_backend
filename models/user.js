@@ -30,9 +30,8 @@ const userSchema = mongoose.Schema({
     banned: {
         type: Boolean,
         default: false
-    },
-});
-
+    }
+}, { timestamps: true }); // Correction : fermeture du schéma avant `timestamps`
 
 userSchema.plugin(uniqueValidator);
 

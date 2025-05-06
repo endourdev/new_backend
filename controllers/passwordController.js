@@ -30,7 +30,7 @@ exports.forgotPassword = (req, res, next) => {
             }
           });
 
-          const resetLink = `http://${req.headers.host}/api/password/reset-password/${resetToken}`;
+          const resetLink = `http://192.168.183.6:3000/${resetToken}/reset-password`;
           const htmlContent = `
             <!DOCTYPE html>
             <html lang="fr">

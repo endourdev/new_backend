@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const errorMessage = require('./utils/messages.json');
@@ -16,16 +17,39 @@ const port = process.env.PORT;
 
 app.use(helmet());
 
-const allowedOrigins = ['http://localhost:3000', 'https://erisium-pvp.fr'];
+app.use(cookieParser())
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://192.168.183.6:3000', // Ton IP locale
+  'https://erisium-pvp.fr',
+  'https://r9c5gz06-3000.uks1.devtunnels.ms'
+];
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
+
+  // Vérifie si l'origine est autorisée
+  if (
+    allowedOrigins.includes(origin) ||
+    origin?.startsWith('http://192.168.') // Autorise toutes les IP locales si besoin
+  ) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
+
+  // Headers standards CORS
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+
+  // Répond aux requêtes préflight directement
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
   next();
 });
+
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -41,6 +65,8 @@ mongoose.connect(`mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGOD
   .catch((err) => console.error('Connexion à MongoDB échouée :', err.message));
 
 app.use(requestLogger);
+
+app.get('/ip', (request, response) => response.send(request.ip))
 
 app.use('/', express.static(path.join(__dirname, 'public')))
 
